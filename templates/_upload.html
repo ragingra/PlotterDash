@@ -1,0 +1,32 @@
+<section id="uploadSection" class="mb-4" style="display: none">
+  <hr />
+  <h2>Upload SVG</h2>
+  <form
+    hx-post="/upload_svg"
+    hx-swap="none"
+    enctype="multipart/form-data"
+    class="row g-2"
+  >
+    <div class="col-12">
+      <label class="form-label">Choose SVG(s):</label>
+      <input
+        type="file"
+        name="svg_file"
+        accept=".svg"
+        multiple
+        class="form-control"
+      />
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Pen Speed:</label>
+      <input type="number" name="pen_speed" value="1" class="form-control" />
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Pen Number:</label>
+      <input type="number" name="pen_number" value="1" class="form-control" />
+    </div>
+    <div class="col-12">
+      <button type="submit" class="btn btn-success mt-2">Upload & Queue</button>
+    </div>
+  </form>
+</section>

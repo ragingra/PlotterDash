@@ -1,0 +1,18 @@
+<!-- templates/index.html -->
+{% extends "layout.html" %} {% block content %}
+<h1>Queued SVG to Plotter</h1>
+
+<!-- Connection Section -->
+{% include "_connection.html" %}
+
+<!-- Upload Section -->
+{% include "_upload.html" %}
+
+<!-- Job Control Section -->
+{% include "_job_control.html" %}
+
+<!-- Custom Commands Section -->
+{% include "_custom_commands.html" %}
+
+<!-- Jobs Section -->
+{% include "_jobs_section.html" %} {% endblock %}

@@ -1,0 +1,44 @@
+<section class="mb-4">
+  <h2>Serial Connection</h2>
+
+  <!-- Connect Form -->
+  <form
+    id="connectForm"
+    class="row g-2"
+    hx-post="/connect"
+    hx-swap="none"
+    style="display: block"
+  >
+    <div class="col-auto">
+      <label for="port" class="form-label">Port:</label>
+      <select name="port" id="port" class="form-select">
+        {% for p in port_list %}
+        <option value="{{ p }}">{{ p }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-auto">
+      <label for="baud" class="form-label">Baud:</label>
+      <input
+        type="number"
+        name="baud"
+        id="baud"
+        class="form-control"
+        value="9600"
+      />
+    </div>
+    <div class="col-auto align-self-end">
+      <button type="submit" class="btn btn-primary">Connect</button>
+    </div>
+  </form>
+
+  <!-- Disconnect Form -->
+  <form
+    id="disconnectForm"
+    hx-post="/disconnect"
+    hx-swap="none"
+    style="display: none"
+  >
+    <button class="btn btn-warning">Disconnect</button>
+  </form>
+</section>

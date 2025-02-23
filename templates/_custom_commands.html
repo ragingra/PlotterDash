@@ -1,0 +1,148 @@
+<!-- templates/_custom_commands.html -->
+<section id="customCommandsSection" class="mb-4" style="display: none">
+  <hr />
+  <h2>Custom Commands</h2>
+
+  <!-- Freeform command form -->
+  <form
+    method="POST"
+    class="row g-2 mb-2"
+    hx-post="/send_command"
+    hx-swap="none"
+  >
+    <div class="col-auto">
+      <label for="customCmd" class="form-label">Command:</label>
+      <input
+        id="customCmd"
+        type="text"
+        name="command"
+        placeholder="e.g. PU0,0;PD100,200"
+        class="form-control"
+      />
+    </div>
+    <div class="col-auto align-self-end">
+      <button type="submit" class="btn btn-primary">Send</button>
+    </div>
+  </form>
+
+  <!-- Quick commands as buttons (PU, PD, SP0, etc.) -->
+  <div class="d-flex flex-wrap gap-2 mb-3">
+    <form
+      method="POST"
+      hx-post="/send_command"
+      hx-swap="none"
+    >
+      <input type="hidden" name="command" value="PU" />
+      <button class="btn btn-outline-info">Pen Up (PU)</button>
+    </form>
+    <form
+      method="POST"
+      hx-post="/send_command"
+      hx-swap="none"
+    >
+      <input type="hidden" name="command" value="PD" />
+      <button class="btn btn-outline-info">Pen Down (PD)</button>
+    </form>
+    <form
+      method="POST"
+      hx-post="/send_command"
+      hx-swap="none"
+    >
+      <input type="hidden" name="command" value="SP0" />
+      <button class="btn btn-outline-info">Pen 0 (SP0)</button>
+    </form>
+    <form
+      method="POST"
+      hx-post="/send_command"
+      hx-swap="none"
+    >
+      <input type="hidden" name="command" value="SP1" />
+      <button class="btn btn-outline-info">Pen 1 (SP1)</button>
+    </form>
+    <form
+      method="POST"
+      hx-post="/send_command"
+      hx-swap="none"
+    >
+      <input type="hidden" name="command" value="SP2" />
+      <button class="btn btn-outline-info">Pen 2 (SP2)</button>
+    </form>
+  </div>
+
+  <!-- Single-line container with a small gap for penDown checkbox & distance + arrow forms -->
+  <div class="d-flex align-items-center gap-3 flex-wrap border p-3 rounded">
+    <!-- Pen Down checkbox -->
+    <div class="form-check d-flex align-items-center">
+      <input class="form-check-input me-1" type="checkbox" id="penDownCb" />
+      <label class="form-check-label" for="penDownCb"> Pen Down </label>
+    </div>
+
+    <!-- Distance input -->
+    <div class="d-flex align-items-center">
+      <label for="moveDistance" class="form-label me-2 mb-0">Distance:</label>
+      <input
+        type="number"
+        id="moveDistance"
+        value="100"
+        class="form-control w-auto"
+        style="min-width: 60px"
+      />
+    </div>
+
+    <!-- Up Arrow -->
+    <form
+      method="POST"
+      hx-post="/send_command"
+      hx-swap="none"
+      onsubmit="updateMoveCommand(event, 'up')"
+      class="d-inline-block"
+    >
+      <input type="hidden" name="command" value="PU0,-100" />
+      <button class="btn btn-secondary">&#8593; Up</button>
+    </form>
+
+    <!-- Down Arrow -->
+    <form
+      method="POST"
+      hx-post="/send_command"
+      hx-swap="none"
+      onsubmit="updateMoveCommand(event, 'down')"
+      class="d-inline-block"
+    >
+      <input type="hidden" name="command" value="PU0,100" />
+      <button class="btn btn-secondary">&#8595; Down</button>
+    </form>
+
+    <!-- Left Arrow -->
+    <form
+      method="POST"
+      hx-post="/send_command"
+      hx-swap="none"
+      onsubmit="updateMoveCommand(event, 'left')"
+      class="d-inline-block"
+    >
+      <input type="hidden" name="command" value="PU-100,0" />
+      <button class="btn btn-secondary">&#8592; Left</button>
+    </form>
+
+    <!-- Right Arrow -->
+    <form
+      method="POST"
+      hx-post="/send_command"
+      hx-swap="none"
+      onsubmit="updateMoveCommand(event, 'right')"
+      class="d-inline-block"
+    >
+      <input type="hidden" name="command" value="PU100,0" />
+      <button class="btn btn-secondary">&#8594; Right</button>
+    </form>
+  </div>
+
+  <br />
+
+  <!-- Last command/response display -->
+  <div class="p-3 border rounded">
+    <p><strong>Last Command:</strong> <span id="lastCmdText"></span></p>
+    <p><strong>Last Response:</strong> <span id="lastCmdResp"></span></p>
+  </div>
+</section>

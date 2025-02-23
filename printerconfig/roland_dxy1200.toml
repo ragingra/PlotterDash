@@ -1,0 +1,27 @@
+#########################
+# Roland DXY-1200 device
+#########################
+[device.roland_dxy1200]
+name = "Roland DXY-1200"
+class = "hpgl"
+plotter_unit_length = "0.025mm"
+pen_count = 8
+port = "serial:/dev/ttyUSB0"
+baud_rate = 9600
+write_delay = 0.0
+
+################################################
+# Paper definition(s): letter, A3, etc. go here
+################################################
+
+# New: A3 definition
+[[device.roland_dxy1200.paper]]
+name = "a3"
+paper_orientation = "portrait"
+origin_location = ["0mm", "0mm"]
+origin_location_reference = "botleft"
+y_axis_up = true
+rotate_180 = false
+x_range = [0, 16700]
+y_range = [0, 11800]
+final_pu_params = "0,0"

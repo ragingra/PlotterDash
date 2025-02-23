@@ -1,0 +1,167 @@
+<!-- templates/layout.html -->
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Queued SVG to Plotter</title>
+
+    <!-- Bootstrap CSS -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+    />
+    <!-- HTMX & HTMX SSE extension -->
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+  </head>
+  <body>
+    <div class="container my-4">{% block content %}{% endblock %}</div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- SSE logic for job_status_stream -->
+    <script>
+      const evtSource = new EventSource("/job_status_stream");
+      evtSource.onmessage = function (event) {
+        const data = JSON.parse(event.data);
+
+        const isConnected = data.is_connected;
+        const isRunning = data.is_running;
+        const isPaused = data.is_paused;
+        const jobs = data.jobs;
+
+        const lastCustomCommand = data.last_custom_command || "";
+        const lastCustomResponse = data.last_custom_response || "";
+
+        const connectForm = document.getElementById("connectForm");
+        const disconnectForm = document.getElementById("disconnectForm");
+        const uploadSection = document.getElementById("uploadSection");
+        const jobControlSection = document.getElementById("jobControlSection");
+        const jobsSection = document.getElementById("jobsSection");
+        const customCommandsSection = document.getElementById(
+          "customCommandsSection"
+        );
+
+        const pauseBtn = document.getElementById("pauseBtn");
+        const resumeBtn = document.getElementById("resumeBtn");
+        const stopBtn = document.getElementById("stopBtn");
+
+        // 1) If not connected, show connect form, hide others
+        if (!isConnected) {
+          connectForm.style.display = "block";
+          disconnectForm.style.display = "none";
+          uploadSection.style.display = "none";
+          jobControlSection.style.display = "none";
+          jobsSection.style.display = "none";
+          customCommandsSection.style.display = "none";
+        } else {
+          // Connected
+          connectForm.style.display = "none";
+          disconnectForm.style.display = "block";
+          uploadSection.style.display = "block";
+          jobsSection.style.display = "block";
+          customCommandsSection.style.display = "block";
+
+          if (isRunning) {
+            jobControlSection.style.display = "block";
+            customCommandsSection.style.display = "none";
+
+            // paused => show Resume
+            if (isPaused) {
+              pauseBtn.style.display = "none";
+              resumeBtn.style.display = "inline";
+            } else {
+              pauseBtn.style.display = "inline";
+              resumeBtn.style.display = "none";
+            }
+            stopBtn.style.display = "inline";
+          } else {
+            jobControlSection.style.display = "none";
+            customCommandsSection.style.display = "block";
+          }
+        }
+
+        // 2) Update last custom command/response
+        const lastCmdText = document.getElementById("lastCmdText");
+        const lastCmdResp = document.getElementById("lastCmdResp");
+        if (lastCmdText) {
+          lastCmdText.textContent = lastCustomCommand;
+        }
+        if (lastCmdResp) {
+          lastCmdResp.textContent = lastCustomResponse;
+        }
+
+        // 3) Update the jobs table
+        const tbody = document.querySelector("#jobs-table tbody");
+        if (tbody) {
+          tbody.innerHTML = "";
+          for (let jobId in jobs) {
+            const info = jobs[jobId];
+            const tr = document.createElement("tr");
+
+            let tdId = document.createElement("td");
+            tdId.textContent = info.job_id;
+            tr.appendChild(tdId);
+
+            let tdFile = document.createElement("td");
+            tdFile.textContent = info.filename;
+            tr.appendChild(tdFile);
+
+            let tdStatus = document.createElement("td");
+            tdStatus.textContent = info.status;
+            tr.appendChild(tdStatus);
+
+            let tdProgress = document.createElement("td");
+            tdProgress.textContent = (info.progress_percent || 0) + "%";
+            tr.appendChild(tdProgress);
+
+            let tdSpeed = document.createElement("td");
+            tdSpeed.textContent = info.pen_speed;
+            tr.appendChild(tdSpeed);
+
+            let tdPen = document.createElement("td");
+            tdPen.textContent = info.pen_number;
+            tr.appendChild(tdPen);
+
+            tbody.appendChild(tr);
+          }
+        }
+      };
+
+      evtSource.onerror = function (e) {
+        console.log("SSE connection error:", e);
+      };
+    </script>
+
+    <!-- Move Command JS -->
+    <script>
+      function updateMoveCommand(evt, direction) {
+        const formEl = evt.target;
+        const hiddenInput = formEl.querySelector('input[name="command"]');
+
+        // Check if the penDownCb is checked => "PD", else "PU"
+        const penDownCb = document.getElementById("penDownCb");
+        const penPrefix = penDownCb && penDownCb.checked ? "PD" : "PU";
+
+        // Distance from #moveDistance
+        const moveDistEl = document.getElementById("moveDistance");
+        let dist = 100;
+        if (moveDistEl) {
+          const distStr = moveDistEl.value || "100";
+          dist = parseInt(distStr, 10) || 100;
+        }
+
+        let coords = "0," + dist;
+        if (direction === "down") {
+          coords = "0,-" + dist;
+        } else if (direction === "left") {
+          coords = "-" + dist + ",0";
+        } else if (direction === "right") {
+          coords = dist + ",0";
+        }
+
+        const cmd = penPrefix + coords;
+        hiddenInput.value = cmd;
+      }
+    </script>
+  </body>
+</html>

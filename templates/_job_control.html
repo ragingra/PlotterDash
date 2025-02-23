@@ -1,0 +1,25 @@
+<!-- templates/_job_control.html -->
+<section id="jobControlSection" class="mb-4" style="display: none">
+  <hr />
+  <h2>Job Control</h2>
+
+  <!-- Pause -->
+  <form id="pauseForm" hx-post="/pause" hx-swap="none" style="display: inline">
+    <button id="pauseBtn" class="btn btn-secondary">Pause</button>
+  </form>
+
+  <!-- Resume -->
+  <form
+    id="resumeForm"
+    hx-post="/resume"
+    hx-swap="none"
+    style="display: inline"
+  >
+    <button id="resumeBtn" class="btn btn-secondary">Resume</button>
+  </form>
+
+  <!-- Stop -->
+  <form id="stopForm" hx-post="/stop" hx-swap="none" style="display: inline">
+    <button id="stopBtn" class="btn btn-danger">Stop</button>
+  </form>
+</section>
