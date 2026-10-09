@@ -3,7 +3,8 @@ import time
 
 from serial.tools import list_ports
 
-from hpgl_utils import svg_to_hpgl_commands
+from hpgl_utils import svg_to_hpgl_commands, svg_to_hpgl_commands_multicolor
+from color_utils import extract_colors_from_svg
 from serial_worker import SerialWorker
 
 from flask import Flask, render_template, request, redirect, url_for, jsonify, Response
@@ -45,52 +46,101 @@ def connect_serial():
     try:
         baud = int(baud)
     except:
-        return "Invalid baud", 400
+        return "<div class='alert alert-danger'>Invalid baud rate</div>", 400
 
     serial_worker.connect(port, baud)
-    return redirect(url_for("index"))
+
+    if serial_worker.is_connected:
+        return """
+        <div class="d-flex align-items-center gap-3">
+            <span class="badge bg-success">Connected</span>
+            <form hx-post="/disconnect" hx-target="#connection-status" hx-swap="innerHTML">
+                <button class="btn btn-warning btn-sm">Disconnect</button>
+            </form>
+        </div>
+        """
+    else:
+        return "<div class='alert alert-danger'>Failed to connect. Check port and try again.</div>", 400
+
 
 @app.route("/disconnect", methods=["POST"])
 def disconnect_serial():
     serial_worker.disconnect()
-    return redirect(url_for("index"))
+    return "<div class='text-muted'>Disconnected</div>"
 
 # ------------------------------
 # Upload/Queue Jobs
 # ------------------------------
+@app.route("/analyze_svg", methods=["POST"])
+def analyze_svg():
+    """
+    Analyze an SVG file and return color assignment UI.
+    """
+    if "svg_file" not in request.files:
+        return "<div class='alert alert-danger'>No SVG file provided</div>", 400
+
+    svg_file = request.files["svg_file"]
+    if svg_file.filename == "":
+        return "<div class='alert alert-danger'>No file selected</div>", 400
+
+    pen_speed = int(request.form.get("pen_speed", 1))
+
+    # Save the file
+    filename = svg_file.filename
+    filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+    svg_file.save(filepath)
+
+    # Extract colors from SVG
+    colors = extract_colors_from_svg(filepath)
+
+    # Return color assignment partial
+    return render_template(
+        "_color_assignment.html",
+        filename=filename,
+        filepath=filepath,
+        colors=colors,
+        pen_speed=pen_speed
+    )
+
+
 @app.route("/upload_svg", methods=["POST"])
 def upload_svg():
     """
-    Handle multiple SVG uploads in one request if desired.
-    Also handle pen_speed, pen_number from the form (both default to 1).
+    Queue an SVG job with color-to-pen mapping.
     """
-    if "svg_file" not in request.files:
-        return "No SVG file part", 400
-
+    filepath = request.form.get("filepath")
+    filename = request.form.get("filename")
     pen_speed = int(request.form.get("pen_speed", 1))
-    pen_number = int(request.form.get("pen_number", 1))
 
-    svg_files = request.files.getlist("svg_file")
-    if not svg_files:
-        return "No files selected", 400
+    if not filepath or not os.path.exists(filepath):
+        return "<div class='alert alert-danger'>File not found</div>", 400
 
-    # For each file, generate an individual job
-    for f in svg_files:
-        if f.filename == "":
-            continue
-        filename = f.filename
+    # Build color-to-pen mapping from form data
+    color_to_pen = {}
+    for key, value in request.form.items():
+        if key.startswith("pen_#"):
+            color = key[4:]  # Remove "pen_" prefix
+            color_to_pen[color.upper()] = int(value)
 
-        # Save the file
-        filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-        f.save(filepath)
+    # Convert SVG to HPGL with color-aware processing
+    if color_to_pen:
+        commands = svg_to_hpgl_commands_multicolor(filepath, color_to_pen, pen_speed)
+        # Use first pen number for job display
+        pen_number = list(color_to_pen.values())[0] if color_to_pen else 1
+    else:
+        commands = svg_to_hpgl_commands(filepath, pen_speed, 1)
+        pen_number = 1
 
-        # Convert SVG to HPGL commands
-        commands = svg_to_hpgl_commands(filepath, pen_speed, pen_number)
+    # Enqueue the job
+    serial_worker.enqueue_job(filename, commands, pen_speed, pen_number)
 
-        # Enqueue the job
-        serial_worker.enqueue_job(filename, commands, pen_speed, pen_number)
-
-    return redirect(url_for("index"))
+    # Return success message that clears the color preview
+    return """
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        Job queued successfully!
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    """
 
 # ------------------------------
 # Pause/Resume/Stop

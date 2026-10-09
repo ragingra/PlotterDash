@@ -1,13 +1,14 @@
 <section class="mb-4">
   <h2>Serial Connection</h2>
 
-  <!-- Connect Form -->
+  <!-- Connect Form - shown when not connected -->
   <form
     id="connectForm"
     class="row g-2"
     hx-post="/connect"
-    hx-swap="none"
-    style="display: block"
+    hx-target="#connection-status"
+    hx-swap="innerHTML"
+    x-show="!isConnected"
   >
     <div class="col-auto">
       <label for="port" class="form-label">Port:</label>
@@ -32,13 +33,13 @@
     </div>
   </form>
 
-  <!-- Disconnect Form -->
-  <form
-    id="disconnectForm"
-    hx-post="/disconnect"
-    hx-swap="none"
-    style="display: none"
-  >
-    <button class="btn btn-warning">Disconnect</button>
-  </form>
+  <!-- Connection Status + Disconnect - shown when connected -->
+  <div id="connection-status" x-show="isConnected">
+    <div class="d-flex align-items-center gap-3">
+      <span class="badge bg-success">Connected</span>
+      <form hx-post="/disconnect" hx-target="#connection-status" hx-swap="innerHTML">
+        <button class="btn btn-warning btn-sm">Disconnect</button>
+      </form>
+    </div>
+  </div>
 </section>
