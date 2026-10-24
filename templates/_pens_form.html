@@ -1,0 +1,22 @@
+<form hx-post="/pens" hx-target="#pensModalBody" hx-swap="innerHTML">
+  <p class="small text-muted">Describe what is loaded in each carousel slot. Names and colours are used for pen suggestions and previews; speed is the default VS value in cm/s (1–{{ max_speed }}).</p>
+  <div class="table-responsive">
+    <table class="table table-sm align-middle">
+      <thead class="small text-muted"><tr><th>Slot</th><th>Name</th><th>Colour</th><th style="width: 7rem;">Speed</th></tr></thead>
+      <tbody>
+        {% for pen in pens %}
+        <tr>
+          <td class="fw-semibold">{{ pen.slot }}</td>
+          <td><input type="text" name="name_{{ pen.slot }}" value="{{ pen.name }}" maxlength="40" class="form-control form-control-sm" /></td>
+          <td><input type="color" name="color_{{ pen.slot }}" value="{{ pen.color }}" class="form-control form-control-color form-control-sm" /></td>
+          <td><input type="number" name="speed_{{ pen.slot }}" value="{{ pen.speed }}" min="1" max="{{ max_speed }}" class="form-control form-control-sm" /></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="d-flex justify-content-end gap-2">
+    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+    <button type="submit" class="btn btn-primary">Save pens</button>
+  </div>
+</form>

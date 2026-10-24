@@ -1,6 +1,6 @@
 import serial
 
-from hpgl_utils import process_hpgl_commands
+from hpgl_utils import prepare_job_commands
 
 serial_port = "/dev/tty.usbserial-D30IJD40" 
 serial_baud_rate = 9600
@@ -15,7 +15,7 @@ hpgl_input = ""
 with open("/Users/dv-5/Downloads/output.hpgl", "r") as file:
     hpgl_input = file.read()
 
-commands = process_hpgl_commands(hpgl_input, max_pairs=50)
+commands = prepare_job_commands(hpgl_input, default_speed=10, max_pairs=50)
 
 try:
     with serial.Serial(

@@ -1,0 +1,94 @@
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-list-ol me-2"></i>Queue
+      <span class="badge text-bg-secondary ms-1" x-show="queuedCount" x-text="queuedCount"></span>
+    </span>
+    <button class="btn btn-sm btn-outline-secondary" x-show="finishedJobs.length" x-cloak @click="post('/jobs/clear_finished')">
+      <i class="bi bi-eraser me-1"></i>Clear finished
+    </button>
+  </div>
+  <div class="card-body p-0">
+    <div x-show="jobs.length === 0" class="p-4 text-center text-muted small">Nothing queued yet.</div>
+
+    <div class="table-responsive" x-show="jobs.length > 0">
+      <table class="table table-sm table-hover mb-0 align-middle">
+        <thead class="small text-muted">
+          <tr>
+            <th class="ps-3">Job</th>
+            <th>Pens</th>
+            <th style="min-width: 14rem;">Progress</th>
+            <th>Status</th>
+            <th class="text-end pe-3">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="(job, i) in jobs" :key="job.job_id">
+            <tr :class="{'table-primary': job.status === 'running'}">
+              <td class="ps-3">
+                <div class="fw-medium text-truncate" style="max-width: 22rem;" x-text="job.filename" :title="job.filename"></div>
+                <div class="small text-muted">
+                  <span x-text="job.total_commands + ' cmds'"></span>
+                  <span x-show="job.estimated_seconds" x-text="' · ~' + fmtDuration(job.estimated_seconds)"></span>
+                  <span x-show="job.kind === 'pen_test'" class="badge text-bg-light border ms-1">pen test</span>
+                  <span x-show="job.kind === 'outline'" class="badge text-bg-light border ms-1">outline · no pen</span>
+                </div>
+              </td>
+              <td>
+                <div class="d-flex flex-wrap gap-1">
+                  <template x-for="p in job.pens" :key="p">
+                    <span class="pen-chip" :title="pen(p).name + ' @ ' + (job.pen_speeds[p] || pen(p).speed) + ' cm/s'">
+                      <span class="pen-dot" :style="'background:' + pen(p).color"></span>
+                      <span x-text="p"></span>
+                    </span>
+                  </template>
+                </div>
+              </td>
+              <td>
+                <template x-if="job.status === 'running' || job.progress_percent > 0">
+                  <div>
+                    <div class="progress mb-1">
+                      <div class="progress-bar" :class="{'progress-bar-striped progress-bar-animated': job.status === 'running' && !isPaused, 'bg-success': job.status === 'done', 'bg-danger': job.status === 'error', 'bg-warning': job.status === 'stopped'}"
+                           :style="'width:' + job.progress_percent + '%'"></div>
+                    </div>
+                    <div class="small text-muted d-flex justify-content-between">
+                      <span x-text="job.progress_percent + '%'"></span>
+                      <span x-show="job.status === 'running'" x-text="'~' + fmtDuration(remaining(job)) + ' left'"></span>
+                      <span x-show="job.status !== 'running' && job.elapsed_seconds" x-text="fmtDuration(job.elapsed_seconds)"></span>
+                    </div>
+                  </div>
+                </template>
+                <template x-if="job.status === 'queued'">
+                  <span class="small text-muted" x-text="'Position ' + (queuedJobs.findIndex(q => q.job_id === job.job_id) + 1)"></span>
+                </template>
+              </td>
+              <td>
+                <span class="badge" :class="statusBadge(job.status)" x-text="job.status"></span>
+                <div x-show="job.error" class="small text-danger" x-text="job.error"></div>
+                <div x-show="job.warnings" class="small text-warning" x-text="job.warnings + ' plotter error(s), last code ' + job.last_plotter_error"></div>
+              </td>
+              <td class="text-end pe-3 text-nowrap">
+                <button class="btn btn-sm btn-link text-secondary p-1" title="Preview" x-show="job.has_preview" @click="showJobPreview(job.job_id)"><i class="bi bi-eye"></i></button>
+                <template x-if="job.status === 'queued'">
+                  <span>
+                    <button class="btn btn-sm btn-link text-secondary p-1" title="Move up" :disabled="queuedJobs[0] && queuedJobs[0].job_id === job.job_id" @click="post('/jobs/' + job.job_id + '/move/up')"><i class="bi bi-chevron-up"></i></button>
+                    <button class="btn btn-sm btn-link text-secondary p-1" title="Move down" :disabled="queuedJobs[queuedJobs.length - 1] && queuedJobs[queuedJobs.length - 1].job_id === job.job_id" @click="post('/jobs/' + job.job_id + '/move/down')"><i class="bi bi-chevron-down"></i></button>
+                    <button class="btn btn-sm btn-link text-danger p-1" title="Cancel" @click="post('/jobs/' + job.job_id + '/cancel')"><i class="bi bi-x-circle"></i></button>
+                  </span>
+                </template>
+                <template x-if="job.status === 'running'">
+                  <button class="btn btn-sm btn-link text-danger p-1" title="Stop" @click="post('/stop')"><i class="bi bi-stop-circle"></i></button>
+                </template>
+                <template x-if="!['queued', 'running'].includes(job.status)">
+                  <span>
+                    <button class="btn btn-sm btn-link text-secondary p-1" title="Run again" @click="post('/jobs/' + job.job_id + '/rerun')"><i class="bi bi-arrow-repeat"></i></button>
+                    <button class="btn btn-sm btn-link text-secondary p-1" title="Remove" @click="post('/jobs/' + job.job_id + '/remove')"><i class="bi bi-trash"></i></button>
+                  </span>
+                </template>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

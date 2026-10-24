@@ -1,0 +1,7 @@
+<div class="d-flex justify-content-between flex-wrap gap-2 mb-2">
+  <div class="fw-semibold">{{ job.filename }}</div>
+  <div class="small text-muted">
+    pens {{ job.pens|join(', ') }} · {{ job.total_commands }} commands · est. {{ job.estimated_seconds|duration }}
+  </div>
+</div>
+<div class="preview-frame">{{ job.preview_svg|safe }}</div>

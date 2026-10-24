@@ -1,0 +1,98 @@
+<div class="card" :class="{'disabled-section': !isConnected || isRunning}">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-joystick me-2"></i>Manual control</span>
+    <small class="text-muted fw-normal" x-show="isRunning" x-cloak>unavailable while plotting</small>
+  </div>
+  <div class="card-body vstack gap-3">
+
+    <div class="d-flex gap-3 align-items-start flex-wrap">
+      <div class="jog-grid" id="jogPad">
+        <span></span>
+        <form hx-post="/jog" hx-include="#jogOptions" hx-swap="none"><input type="hidden" name="direction" value="up" />
+          <button class="btn btn-outline-primary" title="Move +Y"><i class="bi bi-arrow-up"></i></button></form>
+        <span></span>
+        <form hx-post="/jog" hx-include="#jogOptions" hx-swap="none"><input type="hidden" name="direction" value="left" />
+          <button class="btn btn-outline-primary" title="Move -X"><i class="bi bi-arrow-left"></i></button></form>
+        <form hx-post="/send_command"><input type="hidden" name="command" value="PA;PU0,0;" />
+          <button class="btn btn-outline-secondary" title="Go to origin (0,0)"><i class="bi bi-house"></i></button></form>
+        <form hx-post="/jog" hx-include="#jogOptions" hx-swap="none"><input type="hidden" name="direction" value="right" />
+          <button class="btn btn-outline-primary" title="Move +X"><i class="bi bi-arrow-right"></i></button></form>
+        <span></span>
+        <form hx-post="/jog" hx-include="#jogOptions" hx-swap="none"><input type="hidden" name="direction" value="down" />
+          <button class="btn btn-outline-primary" title="Move -Y"><i class="bi bi-arrow-down"></i></button></form>
+        <span></span>
+      </div>
+
+      <div id="jogOptions" class="vstack gap-2 flex-fill" style="min-width: 9rem;">
+        <div class="input-group input-group-sm">
+          <span class="input-group-text">Step</span>
+          <input type="number" name="distance" value="400" min="1" max="20000" class="form-control" />
+          <span class="input-group-text">units</span>
+        </div>
+        <div class="form-check form-switch small">
+          <input class="form-check-input" type="checkbox" name="pen_down" id="jogPenDown" />
+          <label class="form-check-label" for="jogPenDown">Pen down while moving</label>
+        </div>
+        <div class="small text-muted">1 unit = 0.025 mm · 400 = 1 cm</div>
+        <div class="small d-flex align-items-center gap-2">
+          <span class="text-muted">Pen at</span>
+          <span class="mono" x-text="position ? (position.x_mm.toFixed(1) + ', ' + position.y_mm.toFixed(1) + ' mm' + (position.pen_down ? ' ↓' : '')) : '—'"></span>
+          <button type="button" class="btn btn-link btn-sm p-0" title="Read position from plotter (OA;)" @click="readPosition()"><i class="bi bi-crosshair"></i></button>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="small text-muted mb-1">Select pen</div>
+      <div class="d-flex flex-wrap gap-1">
+        <form hx-post="/send_command"><input type="hidden" name="command" value="SP0;" />
+          <button class="btn btn-sm btn-outline-dark" title="Return pen to carousel">None</button></form>
+        <template x-for="p in penLibrary" :key="p.slot">
+          <button class="btn btn-sm btn-outline-dark d-inline-flex align-items-center gap-1" :title="p.name"
+                  @click="post('/send_command', new URLSearchParams({command: 'SP' + p.slot + ';'}))">
+            <span class="pen-dot" :style="'background:' + p.color"></span><span x-text="p.slot"></span>
+          </button>
+        </template>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2">
+      <form hx-post="/send_command" class="flex-fill"><input type="hidden" name="command" value="PU;" />
+        <button class="btn btn-sm btn-outline-secondary w-100"><i class="bi bi-arrow-bar-up me-1"></i>Pen up</button></form>
+      <form hx-post="/send_command" class="flex-fill"><input type="hidden" name="command" value="PD;" />
+        <button class="btn btn-sm btn-outline-secondary w-100"><i class="bi bi-arrow-bar-down me-1"></i>Pen down</button></form>
+      <form hx-post="/send_command" class="flex-fill"><input type="hidden" name="command" value="PU;SP0;" />
+        <button class="btn btn-sm btn-outline-secondary w-100" title="Lift pen and return it to the carousel"><i class="bi bi-box-arrow-in-down me-1"></i>Park</button></form>
+    </div>
+
+    <form hx-post="/send_command" hx-on::after-request="if (event.detail.successful) this.reset()">
+      <label class="small text-muted mb-1" for="customCmd">Custom HPGL</label>
+      <div class="input-group input-group-sm">
+        <input id="customCmd" type="text" name="command" placeholder="e.g. PA;PU1000,1000;PD2000,2000;" class="form-control mono" autocomplete="off" />
+        <button type="submit" class="btn btn-primary">Send</button>
+      </div>
+      <div class="small text-muted mt-1 mono">
+        <span x-text="lastCustomCommand ? ('> ' + lastCustomCommand) : ''"></span>
+        <span x-show="lastCustomCommand" class="ms-2" :class="lastCustomResponse === '0' ? 'text-success' : 'text-danger'"
+              x-text="lastCustomResponse === '0' ? 'OK' : ('reply ' + lastCustomResponse)"></span>
+      </div>
+    </form>
+
+    <details>
+      <summary class="small text-muted">Pen test</summary>
+      <form hx-post="/pen_test" hx-swap="none" class="mt-2">
+        <div class="d-flex flex-wrap gap-2 mb-2">
+          <template x-for="p in penLibrary" :key="p.slot">
+            <label class="pen-chip">
+              <input type="checkbox" name="pens" :value="p.slot" class="form-check-input m-0" checked />
+              <span class="pen-dot" :style="'background:' + p.color"></span>
+              <span x-text="p.slot + ' ' + p.name"></span>
+            </label>
+          </template>
+        </div>
+        <button class="btn btn-sm btn-outline-primary" type="submit"><i class="bi bi-list-check me-1"></i>Queue pen test</button>
+        <div class="small text-muted mt-1">Draws a 2 cm stroke with each selected pen near the origin, one row per pen.</div>
+      </form>
+    </details>
+  </div>
+</div>

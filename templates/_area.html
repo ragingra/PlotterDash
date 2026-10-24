@@ -1,0 +1,84 @@
+<div class="card" id="areaCard">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-bounding-box me-2"></i>Plot area</span>
+    <small class="text-muted fw-normal" x-text="areaLabel"></small>
+  </div>
+  <div class="card-body vstack gap-3">
+    <div class="small text-muted">
+      Where on the bed the drawing goes: the sheet or card size and the position of its bottom-left corner,
+      measured from the plotter origin. Bed is {{ "%.1f"|format(bed.w) }} × {{ "%.1f"|format(bed.h) }} mm.
+    </div>
+
+    <div>
+      <label class="form-label small text-muted mb-1">Paper</label>
+      <select class="form-select form-select-sm" x-model="area.preset" @change="applyPreset()">
+        {% for key, (label, w, h) in paper_presets.items() %}
+        <option value="{{ key }}">{{ label }} · {{ "%g"|format(w) }} × {{ "%g"|format(h) }} mm</option>
+        {% endfor %}
+        <option value="custom">Custom size</option>
+      </select>
+    </div>
+
+    <div class="row g-2 align-items-end">
+      <div class="col-5">
+        <label class="form-label small text-muted mb-1">Width</label>
+        <div class="input-group input-group-sm">
+          <input type="number" class="form-control" min="1" :max="bedW" step="0.1" x-model.number="area.w" @input="area.preset = 'custom'" />
+          <span class="input-group-text">mm</span>
+        </div>
+      </div>
+      <div class="col-2 text-center">
+        <button type="button" class="btn btn-sm btn-outline-secondary w-100" title="Swap width and height" @click="swapArea()"><i class="bi bi-arrow-left-right"></i></button>
+      </div>
+      <div class="col-5">
+        <label class="form-label small text-muted mb-1">Height</label>
+        <div class="input-group input-group-sm">
+          <input type="number" class="form-control" min="1" :max="bedH" step="0.1" x-model.number="area.h" @input="area.preset = 'custom'" />
+          <span class="input-group-text">mm</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-2 align-items-end">
+      <div class="col-6">
+        <label class="form-label small text-muted mb-1">Corner X</label>
+        <div class="input-group input-group-sm">
+          <input type="number" class="form-control" min="0" :max="bedW" step="0.1" x-model.number="area.x" />
+          <span class="input-group-text">mm</span>
+        </div>
+      </div>
+      <div class="col-6">
+        <label class="form-label small text-muted mb-1">Corner Y</label>
+        <div class="input-group input-group-sm">
+          <input type="number" class="form-control" min="0" :max="bedH" step="0.1" x-model.number="area.y" />
+          <span class="input-group-text">mm</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="small text-danger" x-show="areaOverflows" x-cloak>
+      <i class="bi bi-exclamation-triangle me-1"></i>This area reaches past the bed and will be trimmed.
+    </div>
+
+    <div :class="{'disabled-section': !isConnected || isRunning}">
+      <div class="small text-muted mb-1">Set from the pen position: jog the pen to a corner of the paper, then</div>
+      <div class="d-flex gap-2 flex-wrap">
+        <button type="button" class="btn btn-sm btn-outline-primary flex-fill" @click="cornerFromPen('origin')" title="Use the current pen position as the bottom-left corner">
+          <i class="bi bi-box-arrow-in-down-left me-1"></i>Bottom-left = pen
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-primary flex-fill" @click="cornerFromPen('far')" title="Use the current pen position as the top-right corner (sets width and height)">
+          <i class="bi bi-box-arrow-in-up-right me-1"></i>Top-right = pen
+        </button>
+      </div>
+      <div class="d-flex gap-2 flex-wrap mt-2">
+        <button type="button" class="btn btn-sm btn-outline-secondary flex-fill" @click="traceArea()" title="Move the empty pen holder around the area, pen up, twice">
+          <i class="bi bi-arrow-repeat me-1"></i>Trace area on plotter
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" @click="checkLimits()" title="Ask the plotter for its hard-clip limits (OH;) and compare with the configured bed">
+          <i class="bi bi-rulers me-1"></i>Check limits
+        </button>
+      </div>
+      <div class="small mt-2" x-show="limitsInfo" x-cloak :class="limitsOk ? 'text-success' : 'text-warning'" x-text="limitsInfo"></div>
+    </div>
+  </div>
+</div>

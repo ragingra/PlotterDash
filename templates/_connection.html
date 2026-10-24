@@ -1,45 +1,44 @@
-<section class="mb-4">
-  <h2>Serial Connection</h2>
-
-  <!-- Connect Form - shown when not connected -->
-  <form
-    id="connectForm"
-    class="row g-2"
-    hx-post="/connect"
-    hx-target="#connection-status"
-    hx-swap="innerHTML"
-    x-show="!isConnected"
-  >
-    <div class="col-auto">
-      <label for="port" class="form-label">Port:</label>
-      <select name="port" id="port" class="form-select">
-        {% for p in port_list %}
-        <option value="{{ p }}">{{ p }}</option>
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-plug me-2"></i>Connection</span>
+    <span class="badge" :class="isConnected ? 'text-bg-success' : 'text-bg-secondary'" x-text="isConnected ? 'Connected' : 'Offline'"></span>
+  </div>
+  <div class="card-body">
+    <form x-show="!isConnected" hx-post="/connect" class="vstack gap-2">
+      <label class="form-label mb-0 small text-muted" for="port">Port</label>
+      <div class="input-group input-group-sm">
+        <select name="port" id="port" class="form-select" hx-get="/ports" hx-trigger="refreshPorts from:body" hx-swap="innerHTML">
+          {% include "_port_options.html" %}
+        </select>
+        <button type="button" class="btn btn-outline-secondary" title="Refresh ports"
+                @click="htmx.trigger(document.body, 'refreshPorts')">
+          <i class="bi bi-arrow-clockwise"></i>
+        </button>
+      </div>
+      <label class="form-label mb-0 small text-muted" for="baud">Baud</label>
+      <select name="baud" id="baud" class="form-select form-select-sm">
+        {% for b in [1200, 2400, 4800, 9600, 19200, 38400] %}
+        <option value="{{ b }}" {% if b == 9600 %}selected{% endif %}>{{ b }}</option>
         {% endfor %}
       </select>
-    </div>
-    <div class="col-auto">
-      <label for="baud" class="form-label">Baud:</label>
-      <input
-        type="number"
-        name="baud"
-        id="baud"
-        class="form-control"
-        value="9600"
-      />
-    </div>
-    <div class="col-auto align-self-end">
-      <button type="submit" class="btn btn-primary">Connect</button>
-    </div>
-  </form>
+      <button type="submit" class="btn btn-primary btn-sm mt-1">
+        <i class="bi bi-plug-fill me-1"></i>Connect
+      </button>
+    </form>
 
-  <!-- Connection Status + Disconnect - shown when connected -->
-  <div id="connection-status" x-show="isConnected">
-    <div class="d-flex align-items-center gap-3">
-      <span class="badge bg-success">Connected</span>
-      <form hx-post="/disconnect" hx-target="#connection-status" hx-swap="innerHTML">
-        <button class="btn btn-warning btn-sm">Disconnect</button>
-      </form>
+    <!-- x-show sets inline display:none, which Bootstrap's d-flex (!important) would override,
+         so the flex container sits inside the toggled element. -->
+    <div x-show="isConnected" x-cloak>
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <div class="fw-semibold mono" x-text="port"></div>
+          <div class="small text-muted">Roland DXY-1200 · HPGL</div>
+        </div>
+        <button class="btn btn-outline-warning btn-sm" @click="post('/disconnect')" :disabled="isRunning">
+          Disconnect
+        </button>
+      </div>
     </div>
+    <div x-show="isConnected && isRunning" x-cloak class="small text-muted mt-2">Stop the running job before disconnecting.</div>
   </div>
-</section>
+</div>

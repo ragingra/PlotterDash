@@ -1,0 +1,46 @@
+<div class="border rounded p-3 bg-white">
+  {% for w in result.warnings %}
+  <div class="alert alert-warning py-2 small mb-3"><i class="bi bi-exclamation-triangle me-1"></i>{{ w }}</div>
+  {% endfor %}
+  <div class="row g-3">
+    <div class="col-lg-8">
+      <div class="preview-frame preview-bed">{{ result.preview_svg|safe }}</div>
+      <div class="small text-muted mt-2 d-flex flex-wrap gap-3">
+        <span><span class="legend-swatch" style="background:#dfe3e8"></span>Bed {{ "%.0f"|format(bed.w) }} × {{ "%.0f"|format(bed.h) }} mm</span>
+        <span><span class="legend-swatch" style="background:#fff;border-color:#9aa3ad"></span>Plot area {{ "%.0f"|format(result.area.w) }} × {{ "%.0f"|format(result.area.h) }} mm at ({{ "%.0f"|format(result.area.x) }}, {{ "%.0f"|format(result.area.y) }})</span>
+        {% if result.bounds %}
+        <span><span class="legend-swatch" style="border:1px dashed #2563eb"></span>Drawing {{ "%.0f"|format(result.bounds.w) }} × {{ "%.0f"|format(result.bounds.h) }} mm at ({{ "%.0f"|format(result.bounds.x) }}, {{ "%.0f"|format(result.bounds.y) }})</span>
+        {% endif %}
+        <span><span class="legend-swatch" style="border-color:#c2410c;border-width:2px"></span>Origin</span>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="row g-2 mb-3">
+        <div class="col-6"><div class="stat-tile"><div class="label">Est. time</div><div class="value">{{ result.estimated_seconds|duration }}</div></div></div>
+        <div class="col-6"><div class="stat-tile"><div class="label">Commands</div><div class="value">{{ result.commands|length }}</div></div></div>
+        <div class="col-6"><div class="stat-tile"><div class="label">Pen down</div><div class="value">{{ "%.1f"|format(result.total_down_mm / 1000) }} m</div></div></div>
+        <div class="col-6"><div class="stat-tile"><div class="label">Scale</div><div class="value">{{ "%.0f"|format(result.scale * 100) }}%{% if result.rotated %} <small class="text-muted fw-normal">rotated</small>{% endif %}</div></div></div>
+      </div>
+      <table class="table table-sm small mb-0">
+        <thead class="text-muted"><tr><th>Pen</th><th class="text-end">Paths</th><th class="text-end">Draw</th><th class="text-end">Time</th></tr></thead>
+        <tbody>
+          {% for s in result.pens %}
+          <tr>
+            <td><span class="pen-dot me-1" style="background: {{ s.color }};"></span>{{ s.pen }} · {{ pens[s.pen].name }} <span class="text-muted">@ {{ s.speed }}</span></td>
+            <td class="text-end">{{ s.lines }}</td>
+            <td class="text-end">{{ "%.1f"|format(s.down_mm / 1000) }} m</td>
+            <td class="text-end">{{ s.seconds|duration }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <div class="small text-muted mt-2">Time assumes the configured speeds in cm/s, plus pen changes. Actual time depends on acceleration and the handshake delay.</div>
+
+      <button type="button" class="btn btn-sm btn-outline-secondary mt-3 w-100"
+              hx-post="/outline" hx-include="#assignmentForm" hx-swap="none"
+              title="Move the empty pen holder around the plot area and the drawing's extent with the pen up">
+        <i class="bi bi-arrow-repeat me-1"></i>Trace outline on plotter (no pen)
+      </button>
+    </div>
+  </div>
+</div>

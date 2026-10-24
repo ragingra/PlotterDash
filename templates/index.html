@@ -1,22 +1,45 @@
-<!-- templates/index.html -->
 {% extends "layout.html" %}
 
 {% block content %}
-<h1 class="mb-4">PlotterDash</h1>
+<div class="row g-4">
+  <div class="col-lg-4 col-xl-3 d-flex flex-column gap-4">
+    {% include "_connection.html" %}
+    {% include "_job_control.html" %}
+    {% include "_manual.html" %}
+    {% include "_area.html" %}
+  </div>
 
-<!-- Connection Section -->
-{% include "_connection.html" %}
+  <div class="col-lg-8 col-xl-9 d-flex flex-column gap-4">
+    {% include "_upload.html" %}
+    {% include "_queue.html" %}
+  </div>
+</div>
+{% endblock %}
 
-<!-- Upload Section -->
-{% include "_upload.html" %}
+{% block modals %}
+<div class="modal fade" id="pensModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Pen carousel</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="pensModalBody">
+        {% include "_pens_form.html" %}
+      </div>
+    </div>
+  </div>
+</div>
 
-<!-- Job Control Section -->
-{% include "_job_control.html" %}
-
-<!-- Jobs Section -->
-{% include "_jobs_section.html" %}
-
-<!-- Custom Commands Section -->
-{% include "_custom_commands.html" %}
-
+<div class="modal fade" id="jobPreviewModal" tabindex="-1">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Job preview</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="jobPreviewBody"></div>
+    </div>
+  </div>
+</div>
 {% endblock %}

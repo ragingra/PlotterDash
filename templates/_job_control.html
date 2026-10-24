@@ -1,37 +1,50 @@
-<!-- templates/_job_control.html -->
-<section id="jobControlSection" class="mb-4" x-show="isConnected && isRunning">
-  <hr />
-  <h2>Job Control</h2>
-
-  <div class="d-flex gap-2">
-    <!-- Pause (shown when running and not paused) -->
-    <form hx-post="/pause" hx-swap="none" x-show="!isPaused">
-      <button class="btn btn-secondary">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pause-fill me-1" viewBox="0 0 16 16">
-          <path d="M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5m5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5"/>
-        </svg>
-        Pause
-      </button>
-    </form>
-
-    <!-- Resume (shown when paused) -->
-    <form hx-post="/resume" hx-swap="none" x-show="isPaused">
-      <button class="btn btn-primary">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-play-fill me-1" viewBox="0 0 16 16">
-          <path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393"/>
-        </svg>
-        Resume
-      </button>
-    </form>
-
-    <!-- Stop -->
-    <form hx-post="/stop" hx-swap="none">
-      <button class="btn btn-danger">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-stop-fill me-1" viewBox="0 0 16 16">
-          <path d="M5 3.5h6A1.5 1.5 0 0 1 12.5 5v6a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 11V5A1.5 1.5 0 0 1 5 3.5"/>
-        </svg>
-        Stop
-      </button>
-    </form>
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-activity me-2"></i>Plotter</span>
+    <span class="badge" :class="isRunning ? (isPaused ? 'text-bg-warning' : 'text-bg-primary') : 'text-bg-light border'"
+          x-text="isRunning ? (isPaused ? 'Paused' : 'Plotting') : 'Idle'"></span>
   </div>
-</section>
+  <div class="card-body">
+    <template x-if="currentJob">
+      <div>
+        <div class="fw-semibold text-truncate" x-text="currentJob.filename" :title="currentJob.filename"></div>
+        <div class="small text-muted mb-2">
+          <span x-text="currentJob.current_index + ' / ' + currentJob.total_commands + ' commands'"></span>
+          <template x-if="currentJob.warnings"><span class="text-warning ms-2" x-text="currentJob.warnings + ' plotter error(s)'"></span></template>
+        </div>
+        <div class="progress mb-1">
+          <div class="progress-bar" :class="{'progress-bar-striped progress-bar-animated': !isPaused}"
+               :style="'width:' + currentJob.progress_percent + '%'"></div>
+        </div>
+        <div class="d-flex justify-content-between small text-muted mb-3">
+          <span x-text="currentJob.progress_percent + '%'"></span>
+          <span x-text="fmtDuration(currentJob.elapsed_seconds) + ' elapsed · ~' + fmtDuration(remaining(currentJob)) + ' left'"></span>
+        </div>
+        <div class="d-flex gap-2">
+          <button class="btn btn-secondary btn-sm flex-fill" x-show="!isPaused" @click="post('/pause')"><i class="bi bi-pause-fill me-1"></i>Pause</button>
+          <button class="btn btn-primary btn-sm flex-fill" x-show="isPaused" x-cloak @click="post('/resume')"><i class="bi bi-play-fill me-1"></i>Resume</button>
+          <button class="btn btn-danger btn-sm flex-fill" @click="post('/stop')"><i class="bi bi-stop-fill me-1"></i>Stop</button>
+        </div>
+        <div class="small text-muted mt-2">Pause lifts the pen. Stop lifts the pen and returns it to the carousel.</div>
+      </div>
+    </template>
+
+    <template x-if="!currentJob">
+      <div class="text-muted small">
+        <span x-show="!isConnected">Connect to start plotting. Jobs can be queued while offline.</span>
+        <span x-show="isConnected && queuedCount === 0">No job running. Queue an SVG to begin.</span>
+        <span x-show="isConnected && queuedCount > 0 && queueHeld" x-cloak>Queue is on hold.</span>
+        <span x-show="isConnected && queuedCount > 0 && !queueHeld" x-cloak>Starting next job…</span>
+      </div>
+    </template>
+
+    <hr class="my-3" />
+    <div class="form-check form-switch">
+      <input class="form-check-input" type="checkbox" id="holdQueue" :checked="queueHeld"
+             @change="post('/queue/hold', new URLSearchParams({held: $event.target.checked ? 1 : 0}))" />
+      <label class="form-check-label small" for="holdQueue">
+        Hold queue <span class="text-muted">(finish current job, don't start the next)</span>
+      </label>
+    </div>
+  </div>
+</div>

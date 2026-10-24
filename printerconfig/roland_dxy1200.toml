@@ -10,14 +10,22 @@ port = "serial:/dev/ttyUSB0"
 baud_rate = 9600
 write_delay = 0.0
 
-################################################
-# Paper definition(s): letter, A3, etc. go here
-################################################
-
-# New: A3 definition
+################################################################
+# The whole plotting bed as one "paper".
+#
+# PlotterDash lays drawings out in bed coordinates itself (paper
+# size, position and margins are chosen in the UI), so this is the
+# only paper definition needed. X runs along the long edge of the
+# bed, Y along the short edge, origin at the bottom-left corner
+# (DXY "lower-left origin" mode), Y increasing upwards.
+#
+# x_range / y_range are the plotter's hard limits in plotter units
+# (0.025 mm): 16700 x 11800 = 417.5 x 295 mm. The "Check plotter
+# limits" button in the UI sends OH; and shows what the plotter
+# itself reports, so these can be corrected if they differ.
+################################################################
 [[device.roland_dxy1200.paper]]
-name = "a3"
-paper_orientation = "portrait"
+name = "bed"
 origin_location = ["0mm", "0mm"]
 origin_location_reference = "botleft"
 y_axis_up = true

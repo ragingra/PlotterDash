@@ -1,189 +1,251 @@
-<!-- templates/layout.html -->
 <!DOCTYPE html>
-<html>
+<html lang="en" data-bs-theme="light">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>PlotterDash</title>
 
-    <!-- Bootstrap CSS -->
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
-    />
-    <!-- HTMX -->
-    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
-    <!-- Alpine.js -->
-    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.4/dist/htmx.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
 
     <style>
-      .progress-bar-animated {
-        transition: width 0.3s ease;
-      }
-      .color-swatch {
-        width: 24px;
-        height: 24px;
-        border-radius: 4px;
-        border: 1px solid #ccc;
-        display: inline-block;
-      }
-      .toast-container {
-        position: fixed;
-        top: 1rem;
-        right: 1rem;
-        z-index: 1050;
-      }
-      .fade-enter {
-        opacity: 0;
-        transform: translateY(-10px);
-      }
-      .fade-enter-active {
-        opacity: 1;
-        transform: translateY(0);
-        transition: all 0.3s ease;
-      }
+      :root { --pd-paper: #fbfaf7; }
+      body { background: #f3f4f6; }
+      [x-cloak] { display: none !important; }
+      .navbar-brand { letter-spacing: 0.02em; }
+      .card { border: 0; box-shadow: 0 1px 2px rgba(0,0,0,.06), 0 1px 3px rgba(0,0,0,.04); }
+      .card-header { background: transparent; border-bottom: 1px solid rgba(0,0,0,.06); font-weight: 600; }
+      .swatch { width: 22px; height: 22px; border-radius: 6px; border: 1px solid rgba(0,0,0,.15); display: inline-block; flex: 0 0 auto; }
+      .pen-dot { width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(0,0,0,.2); display: inline-block; vertical-align: -2px; }
+      .pen-chip { display: inline-flex; align-items: center; gap: .3rem; font-size: .8rem; padding: .1rem .45rem; border-radius: 999px; background: #fff; border: 1px solid rgba(0,0,0,.1); }
+      .jog-grid { display: grid; grid-template-columns: repeat(3, 2.6rem); grid-template-rows: repeat(3, 2.6rem); gap: .25rem; }
+      .jog-grid form { display: contents; }
+      .jog-grid .btn { padding: 0; }
+      .preview-frame { background: var(--pd-paper); border: 1px solid rgba(0,0,0,.12); border-radius: 6px; padding: .5rem; }
+      .preview-frame svg { width: 100%; height: auto; max-height: 70vh; display: block; }
+      .preview-bed { background: #f3f4f6; padding: .25rem; }
+      .legend-swatch { width: 12px; height: 12px; display: inline-block; vertical-align: -2px; margin-right: .3rem; border: 1px solid rgba(0,0,0,.25); border-radius: 2px; }
+      .progress { height: 8px; }
+      .progress-bar { transition: width .4s ease; }
+      .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+      .table-sm td, .table-sm th { vertical-align: middle; }
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .85em; }
+      .toast-container { z-index: 1090; }
+      .disabled-section { opacity: .5; pointer-events: none; }
+      .stat-tile { background: #fff; border: 1px solid rgba(0,0,0,.08); border-radius: 8px; padding: .5rem .75rem; }
+      .stat-tile .label { font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; color: #6b7280; }
+      .stat-tile .value { font-size: 1.1rem; font-weight: 600; }
     </style>
   </head>
-  <body x-data="appState()">
-    <!-- Toast Container -->
-    <div class="toast-container">
-      <template x-for="(toast, index) in toasts" :key="index">
-        <div
-          class="toast show mb-2"
-          :class="{'bg-success text-white': toast.type === 'success', 'bg-danger text-white': toast.type === 'error', 'bg-info text-white': toast.type === 'info'}"
-          role="alert"
-        >
-          <div class="toast-body d-flex justify-content-between align-items-center">
-            <span x-text="toast.message"></span>
-            <button type="button" class="btn-close btn-close-white ms-2" @click="removeToast(index)"></button>
+
+  <body x-data="appState()" x-init="init()">
+    <nav class="navbar navbar-dark bg-dark mb-4">
+      <div class="container-fluid px-3 px-lg-4">
+        <span class="navbar-brand fw-semibold"><i class="bi bi-pencil me-2"></i>PlotterDash</span>
+        <div class="d-flex align-items-center gap-3 text-light small">
+          <span x-show="simulated" x-cloak class="badge text-bg-warning">Simulated plotter</span>
+          <span class="d-flex align-items-center gap-2">
+            <span class="status-dot" :class="isConnected ? 'bg-success' : 'bg-secondary'"></span>
+            <span x-text="isConnected ? ('Connected · ' + port) : 'Disconnected'"></span>
+          </span>
+          <span x-show="!streamOk" x-cloak class="badge text-bg-danger">No status stream</span>
+        </div>
+      </div>
+    </nav>
+
+    <div class="toast-container position-fixed top-0 end-0 p-3">
+      <template x-for="t in toasts" :key="t.id">
+        <div class="toast show mb-2 border-0" :class="{'text-bg-success': t.type==='success','text-bg-danger': t.type==='error','text-bg-dark': t.type==='info'}" role="alert">
+          <div class="toast-body d-flex justify-content-between align-items-center gap-3">
+            <span x-text="t.message"></span>
+            <button type="button" class="btn-close btn-close-white" @click="removeToast(t.id)"></button>
           </div>
         </div>
       </template>
     </div>
 
-    <div class="container my-4">{% block content %}{% endblock %}</div>
+    <main class="container-fluid px-3 px-lg-4 pb-5">{% block content %}{% endblock %}</main>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    {% block modals %}{% endblock %}
 
-    <!-- Alpine.js App State -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
       function appState() {
         return {
-          isConnected: false,
-          isRunning: false,
-          isPaused: false,
-          jobs: {},
-          lastCustomCommand: "",
-          lastCustomResponse: "",
-          toasts: [],
-          previousJobStatuses: {},
+          isConnected: false, port: null, simulated: false, streamOk: true,
+          isRunning: false, isPaused: false, queueHeld: false, queuedCount: 0,
+          jobs: [], currentJobId: null,
+          lastCustomCommand: "", lastCustomResponse: "", lastError: null,
+          penLibrary: {{ pens|default([])|tojson }},
+          paperPresets: {{ paper_presets|default({})|tojson }},
+          bedW: {{ bed.w if bed else 0 }}, bedH: {{ bed.h if bed else 0 }},
+          area: { preset: {{ default_preset|default('a4')|tojson }}, w: 297, h: 210, x: 0, y: 0 },
+          position: null, limitsInfo: "", limitsOk: true,
+          toasts: [], _toastSeq: 0, _prevStatuses: {}, _first: true,
 
           init() {
+            this.loadArea();
+            this.$watch("area", () => this.saveArea());
             this.startSSE();
+            document.body.addEventListener("positionChanged", (e) => { this.position = e.detail; });
+            document.body.addEventListener("toast", (e) => this.addToast(e.detail.message, e.detail.type));
+            document.body.addEventListener("jobQueued", () => {
+              const f = document.getElementById("uploadForm");
+              if (f) f.reset();
+            });
+            document.body.addEventListener("pensChanged", () => this.refreshPens());
+            document.body.addEventListener("htmx:responseError", (e) => {
+              this.addToast(e.detail.xhr.responseText || ("Request failed (" + e.detail.xhr.status + ")"), "error");
+            });
+            document.body.addEventListener("htmx:sendError", () => this.addToast("Could not reach the server", "error"));
           },
 
           startSSE() {
-            const evtSource = new EventSource("/job_status_stream");
-            evtSource.onmessage = (event) => {
-              const data = JSON.parse(event.data);
-              this.handleSSEUpdate(data);
-            };
-            evtSource.onerror = (e) => {
-              console.log("SSE connection error:", e);
-            };
+            const es = new EventSource("/job_status_stream");
+            es.onopen = () => { this.streamOk = true; };
+            es.onmessage = (ev) => this.apply(JSON.parse(ev.data));
+            es.onerror = () => { this.streamOk = false; };
           },
 
-          handleSSEUpdate(data) {
-            // Detect connection state changes
-            if (data.is_connected !== this.isConnected) {
-              if (data.is_connected) {
-                this.addToast("Connected to plotter", "success");
-              } else {
-                this.addToast("Disconnected from plotter", "info");
+          apply(d) {
+            if (!this._first) {
+              if (d.is_connected !== this.isConnected) {
+                this.addToast(d.is_connected ? ("Connected to " + d.port) : "Disconnected from plotter", d.is_connected ? "success" : "info");
               }
+              if (d.last_error && d.last_error !== this.lastError) this.addToast(d.last_error, "error");
             }
-
-            // Detect job status changes
-            for (let jobId in data.jobs) {
-              const job = data.jobs[jobId];
-              const prevStatus = this.previousJobStatuses[jobId];
-
-              if (!prevStatus && job.status === "queued") {
-                this.addToast(`Job queued: ${job.filename}`, "info");
-              } else if (prevStatus !== job.status) {
-                if (job.status === "running" && prevStatus === "queued") {
-                  this.addToast(`Job started: ${job.filename}`, "info");
-                } else if (job.status === "done") {
-                  this.addToast(`Job completed: ${job.filename}`, "success");
-                } else if (job.status === "error") {
-                  this.addToast(`Job failed: ${job.filename}`, "error");
-                } else if (job.status === "stopped") {
-                  this.addToast(`Job stopped: ${job.filename}`, "info");
-                }
+            for (const job of d.jobs) {
+              const prev = this._prevStatuses[job.job_id];
+              if (!this._first && prev !== job.status) {
+                if (job.status === "running") this.addToast("Started: " + job.filename, "info");
+                else if (job.status === "done") this.addToast("Finished: " + job.filename, "success");
+                else if (job.status === "error") this.addToast("Failed: " + job.filename + (job.error ? " – " + job.error : ""), "error");
+                else if (job.status === "stopped") this.addToast("Stopped: " + job.filename, "info");
               }
-              this.previousJobStatuses[jobId] = job.status;
+              this._prevStatuses[job.job_id] = job.status;
             }
+            this.isConnected = d.is_connected; this.port = d.port; this.simulated = d.simulated;
+            this.isRunning = d.is_running; this.isPaused = d.is_paused;
+            this.queueHeld = d.queue_held; this.queuedCount = d.queued_count;
+            this.jobs = d.jobs; this.currentJobId = d.current_job_id;
+            this.lastCustomCommand = d.last_custom_command || "";
+            this.lastCustomResponse = d.last_custom_response || "";
+            this.lastError = d.last_error;
+            if (d.position || !d.is_connected) this.position = d.position;
+            this._first = false;
+          },
 
-            // Update state
-            this.isConnected = data.is_connected;
-            this.isRunning = data.is_running;
-            this.isPaused = data.is_paused;
-            this.jobs = data.jobs;
-            this.lastCustomCommand = data.last_custom_command || "";
-            this.lastCustomResponse = data.last_custom_response || "";
+          get currentJob() { return this.jobs.find(j => j.job_id === this.currentJobId) || null; },
+          get queuedJobs() { return this.jobs.filter(j => j.status === "queued"); },
+          get finishedJobs() { return this.jobs.filter(j => !["queued", "running"].includes(j.status)); },
+
+          async post(url, body) {
+            try {
+              const r = await fetch(url, { method: "POST", body });
+              this.dispatchTriggers(r);
+              if (!r.ok) { this.addToast((await r.text()) || "Request failed", "error"); return null; }
+              return r;
+            } catch (e) { this.addToast("Could not reach the server", "error"); return null; }
+          },
+          dispatchTriggers(r) {
+            const trig = r.headers.get("HX-Trigger");
+            if (!trig) return;
+            try {
+              const t = JSON.parse(trig);
+              for (const [name, detail] of Object.entries(t)) document.body.dispatchEvent(new CustomEvent(name, { detail }));
+            } catch (_) {}
+          },
+
+          // ---- plot area -------------------------------------------------
+          loadArea() {
+            try {
+              const saved = JSON.parse(localStorage.getItem("plotterdash.area") || "null");
+              if (saved && isFinite(saved.w) && isFinite(saved.h)) this.area = Object.assign(this.area, saved);
+              else this.applyPreset();
+            } catch (_) { this.applyPreset(); }
+          },
+          saveArea() { try { localStorage.setItem("plotterdash.area", JSON.stringify(this.area)); } catch (_) {} },
+          applyPreset() {
+            const p = this.paperPresets[this.area.preset];
+            if (p) { this.area.w = p[1]; this.area.h = p[2]; }
+          },
+          swapArea() { const w = this.area.w; this.area.w = this.area.h; this.area.h = w; },
+          get areaLabel() {
+            const p = this.paperPresets[this.area.preset];
+            const name = p ? p[0] : "Custom";
+            return name + " · " + (+this.area.w).toFixed(0) + " × " + (+this.area.h).toFixed(0) + " mm at (" + (+this.area.x).toFixed(0) + ", " + (+this.area.y).toFixed(0) + ")";
+          },
+          get areaOverflows() { return this.area.x + this.area.w > this.bedW + 0.5 || this.area.y + this.area.h > this.bedH + 0.5; },
+          areaParams() { return new URLSearchParams({ area_x: this.area.x, area_y: this.area.y, area_w: this.area.w, area_h: this.area.h }); },
+          async readPosition() {
+            const r = await this.post("/position");
+            if (!r) return null;
+            const pos = await r.json();
+            this.position = pos;
+            return pos;
+          },
+          async cornerFromPen(which) {
+            const pos = await this.readPosition();
+            if (!pos) return;
+            if (which === "origin") {
+              this.area.x = Math.round(pos.x_mm * 10) / 10;
+              this.area.y = Math.round(pos.y_mm * 10) / 10;
+              this.addToast("Bottom-left corner set to " + pos.x_mm.toFixed(1) + ", " + pos.y_mm.toFixed(1) + " mm", "success");
+            } else {
+              const w = pos.x_mm - this.area.x, h = pos.y_mm - this.area.y;
+              if (w < 1 || h < 1) { this.addToast("Pen must be above and to the right of the bottom-left corner", "error"); return; }
+              this.area.w = Math.round(w * 10) / 10;
+              this.area.h = Math.round(h * 10) / 10;
+              this.area.preset = "custom";
+              this.addToast("Area set to " + this.area.w + " × " + this.area.h + " mm", "success");
+            }
+          },
+          traceArea() { return this.post("/trace_area", this.areaParams()); },
+          async checkLimits() {
+            const r = await this.post("/limits");
+            if (!r) return;
+            const l = await r.json();
+            this.limitsOk = l.matches;
+            this.limitsInfo = "Plotter reports " + l.w_mm + " × " + l.h_mm + " mm (" + l.x0 + "," + l.y0 + " to " + l.x1 + "," + l.y1 + " units); configured bed " + l.bed_w_mm + " × " + l.bed_h_mm + " mm" + (l.matches ? "." : " — update x_range/y_range in printerconfig/roland_dxy1200.toml.");
+          },
+
+          async showJobPreview(id) {
+            const r = await fetch("/jobs/" + id + "/preview");
+            if (!r.ok) { this.addToast(await r.text(), "error"); return; }
+            document.getElementById("jobPreviewBody").innerHTML = await r.text();
+            bootstrap.Modal.getOrCreateInstance("#jobPreviewModal").show();
+          },
+
+          pen(n) { return this.penLibrary.find(p => p.slot === Number(n)) || { name: "Pen " + n, color: "#000000", speed: 10 }; },
+          refreshPens() { fetch("/pens/json").then(r => r.ok ? r.json() : null).then(p => { if (p) this.penLibrary = p; }); },
+
+          fmtDuration(s) {
+            s = Math.max(0, Math.round(s || 0));
+            if (s < 60) return s + "s";
+            const m = Math.floor(s / 60), r = s % 60;
+            if (m < 60) return m + "m " + String(r).padStart(2, "0") + "s";
+            return Math.floor(m / 60) + "h " + String(m % 60).padStart(2, "0") + "m";
+          },
+          remaining(job) {
+            if (!job) return 0;
+            const p = (job.progress_percent || 0) / 100;
+            if (p >= 0.03 && job.elapsed_seconds > 5) return job.elapsed_seconds / p - job.elapsed_seconds;
+            return Math.max(0, (job.estimated_seconds || 0) * (1 - p));
+          },
+          statusBadge(s) {
+            return { running: "text-bg-primary", queued: "text-bg-secondary", done: "text-bg-success",
+                     error: "text-bg-danger", stopped: "text-bg-warning", cancelled: "text-bg-light border" }[s] || "text-bg-light";
           },
 
           addToast(message, type = "info") {
-            this.toasts.push({ message, type });
-            // Auto-remove after 4 seconds
-            setTimeout(() => {
-              this.toasts.shift();
-            }, 4000);
+            const id = ++this._toastSeq;
+            this.toasts.push({ id, message, type });
+            setTimeout(() => this.removeToast(id), type === "error" ? 8000 : 4000);
           },
-
-          removeToast(index) {
-            this.toasts.splice(index, 1);
-          },
-
-          getJobsArray() {
-            return Object.values(this.jobs).sort((a, b) => {
-              // Running jobs first, then queued, then done
-              const order = { running: 0, queued: 1, done: 2, stopped: 3, error: 4 };
-              return (order[a.status] || 5) - (order[b.status] || 5);
-            });
-          }
+          removeToast(id) { this.toasts = this.toasts.filter(t => t.id !== id); },
         };
-      }
-    </script>
-
-    <!-- Move Command JS -->
-    <script>
-      function updateMoveCommand(evt, direction) {
-        const formEl = evt.target;
-        const hiddenInput = formEl.querySelector('input[name="command"]');
-
-        // Check if the penDownCb is checked => "PD", else "PU"
-        const penDownCb = document.getElementById("penDownCb");
-        const penPrefix = penDownCb && penDownCb.checked ? "PD" : "PU";
-
-        // Distance from #moveDistance
-        const moveDistEl = document.getElementById("moveDistance");
-        let dist = 100;
-        if (moveDistEl) {
-          const distStr = moveDistEl.value || "100";
-          dist = parseInt(distStr, 10) || 100;
-        }
-
-        let coords = "0," + dist;
-        if (direction === "down") {
-          coords = "0,-" + dist;
-        } else if (direction === "left") {
-          coords = "-" + dist + ",0";
-        } else if (direction === "right") {
-          coords = dist + ",0";
-        }
-
-        const cmd = penPrefix + coords;
-        hiddenInput.value = cmd;
       }
     </script>
   </body>

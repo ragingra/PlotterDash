@@ -1,0 +1,84 @@
+<form id="assignmentForm"
+      hx-post="/preview" hx-target="#preview" hx-swap="innerHTML" hx-indicator="#convertSpinner"
+      x-data="{ speeds: {{ pens|map(attribute='speed')|list|tojson }} }"
+      class="border rounded p-3 bg-white">
+  <input type="hidden" name="stored" value="{{ stored }}" />
+  <input type="hidden" name="filename" value="{{ filename }}" />
+  <input type="hidden" name="area_x" :value="area.x" />
+  <input type="hidden" name="area_y" :value="area.y" />
+  <input type="hidden" name="area_w" :value="area.w" />
+  <input type="hidden" name="area_h" :value="area.h" />
+
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+    <div>
+      <div class="fw-semibold">{{ filename }}</div>
+      <div class="small text-muted">{{ rows|length }} colour{{ 's' if rows|length != 1 }} detected</div>
+    </div>
+    <button type="button" class="btn btn-sm btn-link text-muted" onclick="document.getElementById('assignment').innerHTML=''; document.getElementById('preview').innerHTML='';">Discard</button>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-sm align-middle mb-3">
+      <thead class="small text-muted">
+        <tr><th>Colour</th><th class="text-end">Paths</th><th class="text-end">Length</th><th style="min-width: 12rem;">Pen</th><th style="width: 7rem;">Speed</th></tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td><span class="d-inline-flex align-items-center gap-2"><span class="swatch" style="background: {{ row.color }};"></span><span class="mono">{{ row.color }}</span></span></td>
+          <td class="text-end">{{ row.lines }}</td>
+          <td class="text-end">{{ "%.0f"|format(row.length_mm / 10) }} cm</td>
+          <td>
+            <select name="pen_{{ row.color }}" class="form-select form-select-sm"
+                    @change="$el.closest('tr').querySelector('input[name^=speed_]').value = speeds[$el.value - 1]">
+              {% for pen in pens %}
+              <option value="{{ pen.slot }}" {% if pen.slot == row.pen %}selected{% endif %}>{{ pen.slot }} · {{ pen.name }}</option>
+              {% endfor %}
+            </select>
+          </td>
+          <td><input type="number" name="speed_{{ row.color }}" value="{{ row.speed }}" min="1" max="{{ max_speed }}" class="form-control form-control-sm" title="cm/s" /></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="row g-2 align-items-end mb-2">
+    <div class="col-6 col-md-4">
+      <label class="form-label small text-muted mb-1">Placement</label>
+      <select name="fit" class="form-select form-select-sm" x-data @change="$el.closest('.row').querySelector('[name=margin_mm]').disabled = $el.value !== 'fit'">
+        <option value="fit">Fit to plot area</option>
+        <option value="keep">Keep SVG size (bottom-left aligned)</option>
+      </select>
+    </div>
+    <div class="col-6 col-md-3">
+      <label class="form-label small text-muted mb-1">Margin (fit)</label>
+      <div class="input-group input-group-sm">
+        <input type="number" name="margin_mm" value="10" min="0" max="200" step="1" class="form-control" />
+        <span class="input-group-text">mm</span>
+      </div>
+    </div>
+    <div class="col-12 col-md-5">
+      <label class="form-label small text-muted mb-1">Rotation</label>
+      <select name="rotation" class="form-select form-select-sm">
+        {% for key, label in rotations.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
+      </select>
+    </div>
+  </div>
+  <div class="small text-muted mb-3">
+    Plot area: <span class="fw-medium text-body" x-text="areaLabel"></span>
+    <a href="#areaCard" class="ms-1">change</a>
+  </div>
+
+  <div class="d-flex gap-2 flex-wrap">
+    <button type="submit" class="btn btn-outline-primary">
+      <span id="convertSpinner" class="htmx-indicator spinner-border spinner-border-sm me-1"></span>
+      <i class="bi bi-eye me-1"></i>Preview
+    </button>
+    <button type="button" class="btn btn-success"
+            hx-post="/queue" hx-include="#assignmentForm" hx-target="#assignment" hx-swap="innerHTML" hx-indicator="#convertSpinner">
+      <i class="bi bi-plus-circle me-1"></i>Add to queue
+    </button>
+    <span class="small text-muted align-self-center">Colours mapped to the same pen are plotted together. Pen order follows slot number.</span>
+  </div>
+</form>
